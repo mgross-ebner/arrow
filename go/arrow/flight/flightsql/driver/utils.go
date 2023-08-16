@@ -67,6 +67,20 @@ func fromArrowType(arr arrow.Array, idx int) (interface{}, error) {
 		return float64(c.Value(idx)), nil
 	case *array.Float64:
 		return c.Value(idx), nil
+	case *array.Decimal128:
+		dt, ok := arr.DataType().(*arrow.Decimal128Type)
+		if !ok {
+			return nil, fmt.Errorf("datatype %T not matching decimal128", arr.DataType())
+		}
+
+		return c.Value(idx).ToFloat64(dt.Scale), nil
+	case *array.Decimal256:
+		dt, ok := arr.DataType().(*arrow.Decimal256Type)
+		if !ok {
+			return nil, fmt.Errorf("datatype %T not matching decimal256", arr.DataType())
+		}
+
+		return c.Value(idx).ToFloat64(dt.Scale), nil
 	case *array.Int8:
 		return int64(c.Value(idx)), nil
 	case *array.Int16:
@@ -74,6 +88,8 @@ func fromArrowType(arr arrow.Array, idx int) (interface{}, error) {
 	case *array.Int32:
 		return int64(c.Value(idx)), nil
 	case *array.Int64:
+		return c.Value(idx), nil
+	case *array.Binary:
 		return c.Value(idx), nil
 	case *array.String:
 		return c.Value(idx), nil
@@ -98,6 +114,13 @@ func fromArrowType(arr arrow.Array, idx int) (interface{}, error) {
 		}
 		v := c.Value(idx)
 		return v.ToTime(dt.TimeUnit()), nil
+	case *array.Date64:
+		return c.Value(idx).ToTime(), nil
+	case *array.DayTimeInterval:
+		durationDays := time.Duration(c.Value(idx).Days*24) * time.Hour
+		duration := time.Duration(c.Value(idx).Milliseconds) * time.Millisecond
+
+		return durationDays + duration, nil
 	}
 
 	return nil, fmt.Errorf("type %T: %w", arr, ErrNotSupported)
